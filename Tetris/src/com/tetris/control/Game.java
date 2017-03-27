@@ -12,6 +12,7 @@ import java.awt.image.BufferStrategy;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 import com.tetris.model.Board;
 import com.tetris.model.Tetronimo;
@@ -104,7 +105,10 @@ public class Game extends JFrame implements Runnable {
 	private void addComponents() {
 		JLabel title = new JLabel("Tetris");
 		title.setFont(new Font("Calibri", Font.BOLD, 30));
+		title.setBounds(120, 10, 150, 20); 
 		add(title);
+		
+		
 		
 		// Establish Start Button
 		JButton startButton = new JButton("Start");
@@ -159,12 +163,16 @@ public class Game extends JFrame implements Runnable {
 	public void run() {
 		boolean running = true;
 		while(running) {
+			
+			// Run logic
+			// for board DS, get the current piece.
+			
+			// Paint and Render
 			BufferStrategy buf = getBufferStrategy();
 			if (buf == null) {
 				createBufferStrategy(3);
 				continue;
 			}
-			
 			Graphics2D g = (Graphics2D) buf.getDrawGraphics();
 			render(g);
 			buf.show();
@@ -185,7 +193,7 @@ public class Game extends JFrame implements Runnable {
 	private void render(Graphics2D g) {
 		board.paintBoard(g);
 		tetronimo.paintTetronimo(g);
-		tetronimo.drop(board);					// MOVE DROP UNDER SLEEP THREAD
+		tetronimo.drop(g, board);					// MOVE DROP UNDER SLEEP THREAD
 		
 	}
 	

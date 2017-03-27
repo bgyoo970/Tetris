@@ -6,11 +6,10 @@ import java.awt.Point;
 
 public class Tetronimo {
 	
-	private Point spawnCoord = new Point(5,2);
+	private final Point spawnCoord = new Point(5,2);
 	private Point currentCoord;
 	private int currentTetronimoIndex, currentTetronimoOrientation;
 	private Point[] currentPiece;
-	
 	public enum Tetrominoes { NoShape, ZShape, SShape, LineShape, 
         TShape, SquareShape, LShape, MirroredLShape };
         
@@ -18,7 +17,7 @@ public class Tetronimo {
 				Color.cyan, Color.blue, Color.orange, Color.yellow, Color.green, Color.pink, Color.red
 	};
 	
-	public Point[][][] shapeTable = new Point[][][] {
+	private final Point[][][] shapeTable = new Point[][][] {
 		// 0. No Shape
 		{
 			{ new Point(0, 0),   new Point(0, 0),   new Point(0, 0),   new Point(0, 0) },
@@ -74,35 +73,31 @@ public class Tetronimo {
 		}
     };
     
+    // Constructor
+    public Tetronimo() {
+    	currentPiece = generateTetronimo();
+    	currentCoord = new Point(spawnCoord.x, spawnCoord.y);
+    }
+    
+    /**
+     * Creates a tetronimo by generating a piece randomly.
+     * The method returns a point array which represents the spatial arrangement of the unique piece
+     * @return Point array
+     */
     public Point[] generateTetronimo() {
     	currentTetronimoIndex = generateTetronimoIndex();
     	currentTetronimoOrientation = 0;
     	currentPiece = shapeTable[currentTetronimoIndex][currentTetronimoOrientation];
-    	
     	return currentPiece;
     }
     
-    public void paintTetronimo(Graphics2D g, int x, int y) {
-    	// Generate Random Piece Index
-    	currentTetronimoIndex = generateTetronimoIndex();
-    	currentTetronimoOrientation = 0;
-    	if (currentTetronimoIndex == -1)
-			try { throw new Exception("Something went wrong");}
-    		catch (Exception e) {e.printStackTrace();}
-    	
-    	// Select corresponding color and piece
-		g.setColor(tetronimoColor[currentTetronimoIndex - 1]);
-		
-		for (Point p : shapeTable[currentTetronimoIndex][currentTetronimoOrientation])
-		g.fillRect((p.x + spawnCoord.x) * 26, 
-				   (p.y + spawnCoord.y) * 26, 
-				   25, 25);
-    }
-    
+    // TODO: Need to let the underlying color board know that the pieces exist in the spot, as well as rendering it.
+    /**
+     * Paints the Tetronimo using a global point as a reference and a point array for spatial arrangement
+     * of a unique piece.
+     * @param g
+     */
     public void paintTetronimo(Graphics2D g) {
-    	// Generate Random Piece Index
-    	currentTetronimoIndex = generateTetronimoIndex();
-    	currentTetronimoOrientation = 0;
     	if (currentTetronimoIndex == -1)
 			try { throw new Exception("Something went wrong");}
     		catch (Exception e) {e.printStackTrace();}
@@ -110,12 +105,45 @@ public class Tetronimo {
     	// Select corresponding color and piece
 		g.setColor(tetronimoColor[currentTetronimoIndex - 1]);
 		
-		for (Point p : shapeTable[currentTetronimoIndex][currentTetronimoOrientation])
-		g.fillRect((p.x + spawnCoord.x) * 26, 
-				   (p.y + spawnCoord.y) * 26, 
-				   25, 25);
+		int currX, currY;
+    	for (int i = 0; i < currentPiece.length; i++) {
+    		currX = currentPiece[i].x;
+    		currY = currentPiece[i].y;
+    		g.fillRect(((currX + currentCoord.x) * 26),
+    				((currY + currentCoord.y) * 26), 
+    				25, 25);
+    	}
     }
     
+    /**
+     * Unpaints the Tetronimo using a global point as a reference and a point array for spatial arrangement
+     * of a unique piece.
+     * @param g
+     */
+    public void unpaintTetronimo(Graphics2D g) {
+    	if (currentTetronimoIndex == -1)
+			try { throw new Exception("Something went wrong");}
+    		catch (Exception e) {e.printStackTrace();}
+    	Board b = new Board();
+    	
+    	// Select corresponding color and piece
+		g.setColor(b.BOARDCOLOR);
+		
+		int currX, currY;
+    	for (int i = 0; i < currentPiece.length; i++) {
+    		currX = currentPiece[i].x;
+    		currY = currentPiece[i].y;
+    		g.fillRect(((currX + currentCoord.x) * 26),
+    				((currY + currentCoord.y) * 26), 
+    				25, 25);
+    	}
+    }
+    
+    /**
+     * Generates a random number as an index to be used for the shapeTable which holds the data arrays
+     * for each tetronimo
+     * @return int
+     */
     public int generateTetronimoIndex() {
     	int n = (int) ((Math.random() * 20) + 1);
     	
@@ -143,39 +171,52 @@ public class Tetronimo {
     	
     	return -1;
     }
-    public void drop(Board b, Point[] currentPiece) {
+    
+    // TODO: Move this method over to Game.java
+    /**
+     * Drops the piece after one time iteration of the game.
+     * @param g
+     * @param b
+     */
+    public void drop(Graphics2D g, Board b) {
     	int currX, currY;
-    	boolean flag;
+    	boolean flag = true;
+    	
+    	/*
+    	 *  Need to unpaint tetronimo to check if the space the block
+    	 *  wants to move to is the color of the board or not.
+    	 *  If the color is not the color of the board, collision is detected
+    	 */
+    	unpaintTetronimo(g);
     	for (int i = 0; i < currentPiece.length; i++) {
-    		currX = currentPiece[i].x;
-    		currY = currentPiece[i].y;
+    		currX = currentPiece[i].x + currentCoord.x;
+    		currY = currentPiece[i].y + currentCoord.y;
     		if (hasCollisionAt(currX, currY + 1, b))
     			flag = false;
     	}
-    	if (!hasCollisionAt(spawnCoord.x, spawnCoord.y + 1, b))
-    		spawnCoord.y = spawnCoord.y + 1;
+    	paintTetronimo(g);
     	
-    	//else place piece, reset spawnCoord.
-    }
-    
-    public void drop(Board b) {
-    	if (!hasCollisionAt(spawnCoord.x, spawnCoord.y + 1, b))
-    		spawnCoord.y = spawnCoord.y + 1;
-    	
-    	//else place piece, reset spawnCoord.
-    }
-    
-    public boolean hasCollisionAt(int x, int y, Board b) {
-		if(b.board[x][y] == b.BOARDCOLOR) {
-			System.out.println("color: "+ b.board[x][y]);
-    		return false;
-		}
+    	// If no collision, drop the piece
+    	if (flag)
+    		currentCoord.y = currentCoord.y + 1;
     	else {
-			System.out.println("color: "+ b.board[x][y]);
-    		return true;
+    		// 0. Set the piece as a part of the well
+    		// 1. Check if line(s) can be cleared
+    		// 2. Create a new piece
+    		// 3. Reset the location
+    		currentPiece = generateTetronimo();
+    		currentCoord.setLocation(spawnCoord.x, spawnCoord.y);
     	}
     }
     
+    public boolean hasCollisionAt(int x, int y, Board b) {
+		if(b.board[x][y] == b.BOARDCOLOR)
+    		return false;
+    	else
+    		return true;
+    }
+    
+    // Getters
     public Point getSpawnCoord(){
     	return spawnCoord;
     }
@@ -190,5 +231,8 @@ public class Tetronimo {
     }
     public Point[] getCurrentPiece() {
     	return currentPiece;
+    }
+    public Point[][][] getShapeTable() {
+    	return shapeTable;
     }
 }
