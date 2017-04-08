@@ -1,6 +1,7 @@
 package com.tetris.model;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Point;
 
@@ -10,6 +11,8 @@ public class Tetronimo {
 	private Point currentCoord;
 	private int currentTetronimoIndex, currentTetronimoOrientation;
 	private Point[] currentPiece;
+	private Color currentColor;
+	
 	public enum Tetrominoes { NoShape, ZShape, SShape, LineShape, 
         TShape, SquareShape, LShape, MirroredLShape };
         
@@ -76,7 +79,6 @@ public class Tetronimo {
     // Constructor
     public Tetronimo() {
     	currentPiece = generateTetronimo();
-    	currentCoord = new Point(spawnCoord.x, spawnCoord.y);
     }
     
     /**
@@ -88,132 +90,72 @@ public class Tetronimo {
     	currentTetronimoIndex = generateTetronimoIndex();
     	currentTetronimoOrientation = 0;
     	currentPiece = shapeTable[currentTetronimoIndex][currentTetronimoOrientation];
+    	currentCoord = new Point(spawnCoord.x, spawnCoord.y);
+    	currentColor = tetronimoColor[currentTetronimoIndex - 1];
+    	
     	return currentPiece;
     }
     
-    // TODO: Need to let the underlying color board know that the pieces exist in the spot, as well as rendering it.
-    /**
-     * Paints the Tetronimo using a global point as a reference and a point array for spatial arrangement
+	/**
+	 * Paints the Tetronimo using a global point as a reference and a point array for spatial arrangement
      * of a unique piece.
-     * @param g
-     */
-    public void paintTetronimo(Graphics2D g) {
-    	if (currentTetronimoIndex == -1)
-			try { throw new Exception("Something went wrong");}
-    		catch (Exception e) {e.printStackTrace();}
-    	
-    	// Select corresponding color and piece
-		g.setColor(tetronimoColor[currentTetronimoIndex - 1]);
-		
+	 * @param g
+	 */
+	public void paintPiece(Board b, Graphics2D g) {
 		int currX, currY;
-    	for (int i = 0; i < currentPiece.length; i++) {
-    		currX = currentPiece[i].x;
-    		currY = currentPiece[i].y;
-    		g.fillRect(((currX + currentCoord.x) * 26),
-    				((currY + currentCoord.y) * 26), 
+		for (int i = 0; i < currentPiece.length; i++) {
+    		currX = currentPiece[i].x + currentCoord.x;
+    		currY = currentPiece[i].y + currentCoord.y;
+    		g.setColor(currentColor);
+    		g.fillRect((currX * 26),
+    				(currY * 26), 
     				25, 25);
     	}
-    }
-    
-    /**
-     * Unpaints the Tetronimo using a global point as a reference and a point array for spatial arrangement
+	}
+	
+	/**
+	 * Un-Paints the Tetronimo using a global point as a reference and a point array for spatial arrangement
      * of a unique piece.
-     * @param g
-     */
-    public void unpaintTetronimo(Graphics2D g) {
-    	if (currentTetronimoIndex == -1)
-			try { throw new Exception("Something went wrong");}
-    		catch (Exception e) {e.printStackTrace();}
-    	Board b = new Board();
-    	
-    	// Select corresponding color and piece
-		g.setColor(b.BOARDCOLOR);
-		
+	 * @param g
+	 */
+	public void unpaintPiece(Board b, Graphics2D g) {
 		int currX, currY;
-    	for (int i = 0; i < currentPiece.length; i++) {
-    		currX = currentPiece[i].x;
-    		currY = currentPiece[i].y;
-    		g.fillRect(((currX + currentCoord.x) * 26),
-    				((currY + currentCoord.y) * 26), 
+		for (int i = 0; i < currentPiece.length; i++) {
+    		currX = currentPiece[i].x + currentCoord.x;
+    		currY = currentPiece[i].y + currentCoord.y;
+    		g.setColor(b.getBoardColor());
+    		g.fillRect((currX * 26),
+    				(currY * 26), 
     				25, 25);
     	}
-    }
+	}
     
+    // TODO: Need to make it so that it generates a bag of the 7 pieces.
     /**
      * Generates a random number as an index to be used for the shapeTable which holds the data arrays
      * for each tetronimo
      * @return int
      */
     public int generateTetronimoIndex() {
-    	int n = (int) ((Math.random() * 20) + 1);
+    	int n = (int) ((Math.random() * 7) + 1);
     	
-    	// s-shape 20%
-    	if ((n >= 1) && (n <= 4))
+    	switch(n) {
+    	case 1:
     		return 1;
-    	// z-shape 20%
-    	if ((n >= 5) && (n <= 8))
+    	case 2:
     		return 2;
-    	// line-shape 5%
-    	if (n == 9)
+    	case 3:
     		return 3;
-    	// t-shape 10%
-    	if ((n == 10) || (n == 11))
+    	case 4:
     		return 4;
-    	// o-shape 20%
-    	if ((n >= 12) && (n <= 14))
+    	case 5:
     		return 5;
-    	// l-shape 15%
-    	if ((n >= 15) && (n <= 17))
+    	case 6:
     		return 6;
-    	// j-shape 15%
-    	if ((n >= 18) && (n <= 20))
+    	case 7:
     		return 7;
-    	
+    	}
     	return -1;
-    }
-    
-    // TODO: Move this method over to Game.java
-    /**
-     * Drops the piece after one time iteration of the game.
-     * @param g
-     * @param b
-     */
-    public void drop(Graphics2D g, Board b) {
-    	int currX, currY;
-    	boolean flag = true;
-    	
-    	/*
-    	 *  Need to unpaint tetronimo to check if the space the block
-    	 *  wants to move to is the color of the board or not.
-    	 *  If the color is not the color of the board, collision is detected
-    	 */
-    	unpaintTetronimo(g);
-    	for (int i = 0; i < currentPiece.length; i++) {
-    		currX = currentPiece[i].x + currentCoord.x;
-    		currY = currentPiece[i].y + currentCoord.y;
-    		if (hasCollisionAt(currX, currY + 1, b))
-    			flag = false;
-    	}
-    	paintTetronimo(g);
-    	
-    	// If no collision, drop the piece
-    	if (flag)
-    		currentCoord.y = currentCoord.y + 1;
-    	else {
-    		// 0. Set the piece as a part of the well
-    		// 1. Check if line(s) can be cleared
-    		// 2. Create a new piece
-    		// 3. Reset the location
-    		currentPiece = generateTetronimo();
-    		currentCoord.setLocation(spawnCoord.x, spawnCoord.y);
-    	}
-    }
-    
-    public boolean hasCollisionAt(int x, int y, Board b) {
-		if(b.board[x][y] == b.BOARDCOLOR)
-    		return false;
-    	else
-    		return true;
     }
     
     // Getters
@@ -235,4 +177,7 @@ public class Tetronimo {
     public Point[][][] getShapeTable() {
     	return shapeTable;
     }
+	public Color getCurrentColor() {
+		return currentColor;
+	}
 }
