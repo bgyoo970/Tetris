@@ -49,9 +49,9 @@ public class Tetronimo {
 		// 4. T-Shape
 		{
 			{ new Point(1, 0), new Point(0, 1), new Point(1, 1), new Point(2, 1) },
-			{ new Point(1, 0), new Point(0, 1), new Point(1, 1), new Point(1, 2) },
+			{ new Point(1, 0), new Point(1, 1), new Point(2, 1), new Point(1, 2) },
 			{ new Point(0, 1), new Point(1, 1), new Point(2, 1), new Point(1, 2) },
-			{ new Point(1, 0), new Point(1, 1), new Point(2, 1), new Point(1, 2) }
+			{ new Point(1, 0), new Point(0, 1), new Point(1, 1), new Point(1, 2) },
 		},
 		// 5. O-Shape
 		{
@@ -158,7 +158,7 @@ public class Tetronimo {
     	return -1;
     }
     
-    // Getters
+    // Getters & setters
     public Point getSpawnCoord(){
     	return spawnCoord;
     }
@@ -171,8 +171,14 @@ public class Tetronimo {
     public int getCurrentTetronimoOrientation() {
     	return currentTetronimoOrientation;
     }
+    public void setCurrentTetronimoOrientation(int rotation) {
+    	currentTetronimoOrientation = rotation;
+    }
     public Point[] getCurrentPiece() {
     	return currentPiece;
+    }
+    public void setCurrentPiece(Point[] piece) {
+    	currentPiece = piece;
     }
     public Point[][][] getShapeTable() {
     	return shapeTable;

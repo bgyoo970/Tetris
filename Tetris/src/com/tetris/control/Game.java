@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy;
 import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -33,12 +34,16 @@ public class Game extends JFrame implements Runnable {
 	private Thread t;
 	private Graphics2D g;
 	BufferStrategy buf;
+	private boolean pause;
+	private boolean isGameOver;
 	
 	// Constructor
 	public Game() {
 		board = new Board();
 		tetronimo = new Tetronimo();
 		t = new Thread(this);
+		pause = false;
+		isGameOver = false;
 		
 		init();
 	}
@@ -84,24 +89,22 @@ public class Game extends JFrame implements Runnable {
 			public void keyPressed(KeyEvent e) {
 				switch (e.getKeyCode()) {
 				case KeyEvent.VK_UP:
-					System.out.println("up");
+					rotate(board, 1);
 					break;
 				case KeyEvent.VK_DOWN:
 					drop(board);
 					break;
 				case KeyEvent.VK_LEFT:
-					//System.out.println("left");
-					move(board, e);
+					move(board, -1);
 					break;
 				case KeyEvent.VK_RIGHT:
-					//System.out.println("right");
-					move(board, e);
+					move(board, 1);
 					break;
 				case KeyEvent.VK_SPACE:
-					System.out.println("space");
+					hardDrop(board);
 					break;
-				// hold
-				case KeyEvent.VK_SHIFT:
+				case KeyEvent.VK_Z:
+					rotate(board, -1);
 					break;
 				case KeyEvent.VK_ESCAPE:
 					exit();
@@ -130,31 +133,31 @@ public class Game extends JFrame implements Runnable {
 				BUTTONWIDTH, BUTTONHEIGHT);
 		
 		// Establish High Score Button
-		JButton highScoreButton = new JButton("High Scores");
-		highScoreButton.setBounds(WIDTH/2 - BUTTONWIDTH/2, HEIGHT/2 + BUFFERSPACE, 
-				BUTTONWIDTH, BUTTONHEIGHT);
+//		JButton highScoreButton = new JButton("High Scores");
+//		highScoreButton.setBounds(WIDTH/2 - BUTTONWIDTH/2, HEIGHT/2 + BUFFERSPACE, 
+//				BUTTONWIDTH, BUTTONHEIGHT);
 
 		// Start Button Action Listener
 		startButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				remove(startButton);
-				remove(highScoreButton);
+				//remove(highScoreButton);
 				removeAll();
 				start();
 			}
 		});
 		
 		// High Score Action Listener
-		highScoreButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				System.out.println("To Be Implemented");
-			}
-		});
+//		highScoreButton.addActionListener(new ActionListener() {
+//			public void actionPerformed(ActionEvent e) {
+//				System.out.println("To Be Implemented");
+//			}
+//		});
 		
 		startButton.setFocusable(false);
-		highScoreButton.setFocusable(false);
+		//highScoreButton.setFocusable(false);
 		add(startButton);
-		add(highScoreButton);
+		//add(highScoreButton);
 	}
 	
 	/**
@@ -165,7 +168,7 @@ public class Game extends JFrame implements Runnable {
 		t.setPriority(Thread.MAX_PRIORITY);
 		t.start();
 	}
-	
+
 	/**
 	 * Stops the running thread for Tetris and exits the program.
 	 */
@@ -181,7 +184,6 @@ public class Game extends JFrame implements Runnable {
 		buf = getBufferStrategy();
 		while (buf == null) {
 			buf = getBufferStrategy();
-			System.out.println("fkme");
 			createBufferStrategy(3);
 		}
 		g = (Graphics2D) buf.getDrawGraphics();
@@ -200,6 +202,8 @@ public class Game extends JFrame implements Runnable {
 		        new java.util.TimerTask() {
 		            @Override
 		            public void run() {
+		            	if(isGameOver)
+		            		timer.cancel();
 		            	render(g);
 		        		buf.show();
 		            }
@@ -211,6 +215,9 @@ public class Game extends JFrame implements Runnable {
 		        new java.util.TimerTask() {
 		            @Override
 		            public void run() {
+		            	if(isGameOver) {
+		            		timer2.cancel();
+		            	}
 		            	drop(board);
 		            }
 		        }, 1000,
@@ -230,34 +237,53 @@ public class Game extends JFrame implements Runnable {
 	}
 	
 	/**
+	 * Rotate the current piece based on the key event input, if able to do so
+	 * @param b
+	 * @param e
+	 */
+	private void rotate(Board b, int rotate) {
+		if (b == null || !(rotate == 1 || rotate == -1))
+			return;
+		int currX, currY;
+    	boolean flag = true;
+		
+    	// Obtain the rotated piece
+    	Point[] currPiece = tetronimo.getCurrentPiece();
+    	int currOrientation = tetronimo.getCurrentTetronimoOrientation();
+    	int newOrientation = currOrientation + rotate;
+    	if (newOrientation < 0)
+    		newOrientation = 3;
+    	else if(newOrientation > 3)
+    		newOrientation = 0;
+    	
+    	Point[] rotatedPiece = tetronimo.getShapeTable()[tetronimo.getCurrentTetronimoIndex()][newOrientation];
+    	
+    	// Check for collision. See if you can rotate.
+    	for (int i = 0; i < rotatedPiece.length; i++) {
+			currX = rotatedPiece[i].x + tetronimo.getCurrentCoord().x;
+			currY = rotatedPiece[i].y + tetronimo.getCurrentCoord().y;
+			if (hasCollision(currX, currY, b))
+				flag = false;
+		}
+    	
+    	// If no collision, rotate the piece.
+    	if (flag) {
+    		tetronimo.setCurrentPiece(rotatedPiece);
+    		tetronimo.setCurrentTetronimoOrientation(newOrientation);
+    		repaint();
+    	}
+	}
+	
+	/**
 	 * Moves the current piece based on the key event input, if able to do so
 	 * @param b
 	 * @param e
 	 */
-	private void move(Board b, KeyEvent e) {
-		if (e == null || b == null)
+	private void move(Board b, int move) {
+		if (b == null || !(move == 1 || move == -1))
 			return;
-		int k = e.getKeyCode();
-		int move = 0;
 		int currX, currY;
     	boolean flag = true;
-		switch (k) {
-
-		// fast fall
-		case KeyEvent.VK_DOWN:
-			break;
-		// move left
-		case KeyEvent.VK_LEFT:
-	    	move = -1;
-			break;
-		// move right
-		case KeyEvent.VK_RIGHT:
-			move = 1;
-			break;
-		// instadrop
-		case KeyEvent.VK_SPACE:
-			break;
-		} 
 		
     	Point[] currPiece = tetronimo.getCurrentPiece();
     	for (int i = 0; i < currPiece.length; i++) {
@@ -297,13 +323,48 @@ public class Game extends JFrame implements Runnable {
     	}
     	else {
     		attachToWell(b);
+    		clearRows(b);
     		// 0. Set the piece as a part of the well x
     		// 1. Check if line(s) can be cleared
     		// 2. Create a new piece x
     		// 3. Reset the location x
     		tetronimo = new Tetronimo();
+    		isGameOver = isGameOver(tetronimo, b);
     	}
     	repaint();
+    }
+    
+    /**
+     * Check at the spawn coordinate, if the piece detects collision upon spawn, 
+     * @param tetronimo
+     * @param b
+     * @return
+     */
+    private boolean isGameOver(Tetronimo tetronimo, Board b) {
+		if (tetronimo == null)
+			return true;
+		
+		int currX, currY;
+		boolean flag = true;
+    	Point[] currPiece = tetronimo.getCurrentPiece();
+    	for (int i = 0; i < currPiece.length; i++) {
+			currX = currPiece[i].x + tetronimo.getSpawnCoord().x;
+			currY = currPiece[i].y + tetronimo.getSpawnCoord().y;
+			if (hasCollision(currX, currY, b))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+     * Drop the piece to the bottom of the well where it is able to be.
+     * @param b
+     */
+    private void hardDrop(Board b) {
+    	Tetronimo temp = tetronimo;
+    	while(temp.equals(tetronimo)) {
+    		drop(b);
+    	}
     }
     
     /**
@@ -338,7 +399,36 @@ public class Game extends JFrame implements Runnable {
 			b.getBoard()[currX][currY] = tetronimo.getCurrentColor();
 		}
     }
-	
+    
+    /**
+     * Check the entire board, eliminate a row if the row is completely occupied.
+     * 12 x 21; 10 x 19
+     * @param b
+     */
+    private void clearRows(Board b) {
+		boolean gap;
+		//if ((j < 2) || (j > 20) || (i < 1) || (i > 10)) {
+		for (int j = 20; j > 1; j--) {
+			gap = false;
+			for (int i = 1; i < 11; i++) {
+				if (board.getBoard()[i][j] == board.getBoardColor()) {
+					gap = true;
+					break;
+				}
+			}
+			if (!gap) {
+				deleteRow(j);
+				j += 1;
+			}
+		}
+    }
+	public void deleteRow(int row) {
+		for (int j = row-1; j > 1; j--) {
+			for (int i = 1; i < 11; i++) {
+				board.getBoard()[i][j+1] = board.getBoard()[i][j];
+			}
+		}
+	}
 	
 	// Getters and Setters
 	public Board getBoard() {
